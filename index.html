@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Love, in shapes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fde3e8;
+    --ink: #b02341;
+    --display: "Caprasimo", "Cooper Black", Georgia, serif;
+    --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #2b0d1e; --ink: #ff8fa3; }
+  }
+  :root[data-theme="dark"] { --bg: #2b0d1e; --ink: #ff8fa3; }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #stage {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+    touch-action: none;
+  }
+
+  .brand {
+    position: fixed; top: 22px; left: 24px;
+    margin: 0;
+    font: 600 0.95rem/1 var(--body);
+    letter-spacing: 0.01em;
+  }
+
+  /* symbol list */
+  .rail {
+    position: fixed; right: 36px; top: 50%;
+    transform: translateY(-50%);
+  }
+  .rail ul { list-style: none; margin: 0; padding: 0; }
+  .rail button {
+    appearance: none; background: none; border: 0;
+    color: inherit;
+    font: 500 1rem/1.2 var(--body);
+    padding: 9px 0 9px 22px;
+    position: relative;
+    cursor: pointer;
+    text-align: left;
+  }
+  .rail button::before {
+    content: "";
+    position: absolute; left: 0; top: 50%;
+    width: 9px; height: 9px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    transition: background 0.2s;
+  }
+  .rail button[aria-pressed="true"] { font-weight: 700; }
+  .rail button[aria-pressed="true"]::before { background: currentColor; }
+  button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+
+  /* caption */
+  .caption {
+    position: fixed; left: 24px; bottom: 28px; right: 24px;
+    max-width: 34rem;
+  }
+  .copy { transition: opacity 0.22s ease, transform 0.22s ease; }
+  .copy.out { opacity: 0; transform: translateY(8px); }
+  .name {
+    margin: 0;
+    font: 400 clamp(2.6rem, 6vw, 5.5rem)/0.98 var(--display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .meaning {
+    margin: 14px 0 0;
+    max-width: 30rem;
+    font-size: clamp(1rem, 1.5vw, 1.2rem);
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+  .controls { display: flex; align-items: center; gap: 18px; margin-top: 22px; }
+  .btn-main {
+    appearance: none;
+    min-height: 44px;
+    padding: 12px 22px;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: 600 1rem var(--body);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .btn-main:hover { background: var(--ink); color: var(--bg); }
+  .btn-text {
+    appearance: none; background: none; border: 0;
+    min-height: 44px; padding: 12px 4px;
+    color: var(--ink);
+    font: 500 1rem var(--body);
+    text-decoration: underline; text-underline-offset: 4px;
+    cursor: pointer;
+  }
+  .timer {
+    width: 120px; height: 2px; margin-top: 14px;
+    background: color-mix(in srgb, var(--ink) 25%, transparent);
+  }
+  .timer i {
+    display: block; height: 100%;
+    background: var(--ink);
+    transform-origin: left; transform: scaleX(0);
+  }
+  [hidden] { display: none !important; }
+
+  /* phones: symbols become a chip row */
+  @media (max-width: 720px) {
+    .rail { top: 60px; left: 0; right: 0; transform: none; }
+    .rail ul {
+      display: flex; gap: 8px;
+      overflow-x: auto;
+      padding: 6px 24px;
+      scrollbar-width: none;
+    }
+    .rail ul::-webkit-scrollbar { display: none; }
+    .rail li { flex: none; }
+    .rail button {
+      padding: 11px 16px;
+      border: 1.5px solid color-mix(in srgb, currentColor 40%, transparent);
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .rail button::before { display: none; }
+    .rail button[aria-pressed="true"] {
+      background: var(--ink); color: var(--bg); border-color: var(--ink);
+    }
+  }
+  @media (max-height: 520px) {
+    .meaning { display: none; }
+    .name { font-size: 2.2rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .copy { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <canvas id="stage" aria-hidden="true"></canvas>
+
+  <p class="brand">love, in shapes</p>
+
+  <nav class="rail" aria-label="Symbols">
+    <ul id="list"></ul>
+  </nav>
+
+  <section class="caption">
+    <div class="copy" id="copy">
+      <h1 class="name" id="name"></h1>
+      <p class="meaning" id="meaning"></p>
+    </div>
+    <div class="controls">
+      <button class="btn-main" id="another" type="button">Show me another</button>
+      <button class="btn-text" id="pause" type="button">Pause</button>
+    </div>
+    <div class="timer" aria-hidden="true"><i id="bar"></i></div>
+  </section>
+
+<script>
+(function () {
+  var TAU = Math.PI * 2;
+  var DUR = 8; // seconds per symbol
+
+  /* ---------- shape builders (each returns polylines in y-down space) ---------- */
+  function arc(cx, cy, r, a0, a1, steps) {
+    steps = steps || 200;
+    var p = [];
+    for (var i = 0; i <= steps; i++) {
+      var a = a0 + (a1 - a0) * i / steps;
+      p.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+    }
+    return p;
+  }
+  function heart(scale, ox, oy) {
+    var p = [], steps = 400;
+    for (var i = 0; i <= steps; i++) {
+      var t = i / steps * TAU;
+      var x = 16 * Math.pow(Math.sin(t), 3);
+      var y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+      p.push([ox + x / 16 * scale, oy + (y / 16 - 0.156) * scale]);
+    }
+    return p;
+  }
+  function infinity(scale) {
+    var p = [], steps = 500;
+    for (var i = 0; i <= steps; i++) {
+      var t = i / steps * TAU, d = 1 + Math.sin(t) * Math.sin(t);
+      p.push([scale * Math.cos(t) / d, scale * 1.35 * Math.sin(t) * Math.cos(t) / d]);
+    }
+    return p;
+  }
+  function star(cx, cy, ro, ri) {
+    var p = [];
+    for (var i = 0; i <= 10; i++) {
+      var a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? ri : ro;
+      p.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+    }
+    return p;
+  }
+  function roseCurve(amp, phase) {
+    var p = [], steps = 800;
+    for (var i = 0; i <= steps; i++) {
+      var th = i / steps * TAU, r = amp * Math.cos(4 * th - phase);
+      p.push([r * Math.cos(th), r * Math.sin(th)]);
+    }
+    return p;
+  }
+  function arrowParts() {
+    var dx = 2, dy = 1.1, len = Math.hypot(dx, dy);
+    var d = [dx / len, dy / len], n = [-d[1], d[0]];
+    var s = [-1, -0.55], tip = [1, 0.55];
+    var back = [tip[0] - d[0] * 0.26, tip[1] - d[1] * 0.26];
+    var parts = [
+      [s, tip],
+      [tip, [back[0] + n[0] * 0.13, back[1] + n[1] * 0.13], [back[0] - n[0] * 0.13, back[1] - n[1] * 0.13], tip]
+    ];
+    for (var k = 0; k < 3; k++) {
+      var b = [s[0] + d[0] * (0.1 + k * 0.09), s[1] + d[1] * (0.1 + k * 0.09)];
+      parts.push([
+        [b[0] - d[0] * 0.14 + n[0] * 0.14, b[1] - d[1] * 0.14 + n[1] * 0.14],
+        b,
+        [b[0] - d[0] * 0.14 - n[0] * 0.14, b[1] - d[1] * 0.14 - n[1] * 0.14]
+      ]);
+    }
+    return parts;
+  }
+  function crescent() {
+    var d = 0.35, R = 1, r = 0.8;
+    var xi = (R * R + d * d - r * r) / (2 * d), yi = Math.sqrt(R * R - xi * xi);
+    var a0 = Math.atan2(yi, xi), phi = Math.atan2(yi, xi - d);
+    return [arc(0, 0, R, a0, TAU - a0), arc(d, 0, r, phi, TAU - phi), star(0.42, 0, 0.22, 0.09)];
+  }
+
+  /* ---------- the symbols ---------- */
+  var SYMBOLS = [
+    {
+      name: "the heart",
+      text: "Two lobes and a point. Nobody agrees on why it looks like this, and everybody knows what it means.",
+      mult: 1.0,
+      paths: function () { return [heart(1, 0, 0), heart(0.66, 0, 0)]; },
+      dark: { bg: "#2b0d1e", ink: "#ff8fa3" }, light: { bg: "#fde3e8", ink: "#b02341" }
+    },
+    {
+      name: "infinity",
+      text: "A loop with no beginning and no end. What people reach for when \u201cforever\u201d sounds too short.",
+      mult: 1.12,
+      paths: function () { return [infinity(1), infinity(0.86)]; },
+      dark: { bg: "#111b34", ink: "#b9a7ff" }, light: { bg: "#e6e1ff", ink: "#4432b0" }
+    },
+    {
+      name: "two rings",
+      text: "Each ring passes through the other\u2019s centre. Joined, and still two.",
+      mult: 1.05,
+      paths: function () {
+        return [
+          arc(-0.3, 0, 0.6, 0, TAU), arc(0.3, 0, 0.6, 0, TAU),
+          [[0.3, -0.6], [0.38, -0.72], [0.3, -0.84], [0.22, -0.72], [0.3, -0.6]]
+        ];
+      },
+      dark: { bg: "#231c0c", ink: "#f3c969" }, light: { bg: "#fbefc9", ink: "#7a5608" }
+    },
+    {
+      name: "the rose",
+      text: "Eight petals from one equation, eight more tucked between. Roses have meant love for centuries.",
+      mult: 1.0,
+      paths: function () { return [roseCurve(1, 0), roseCurve(0.5, Math.PI / 2), arc(0, 0, 0.09, 0, TAU, 40)]; },
+      dark: { bg: "#2c0a14", ink: "#ff6178" }, light: { bg: "#ffdfe0", ink: "#a10f28" }
+    },
+    {
+      name: "cupid\u2019s arrow",
+      text: "He fires it and nobody gets to pick the target.",
+      mult: 1.05,
+      paths: function () { return [heart(0.72, 0, 0.02)].concat(arrowParts()); },
+      dark: { bg: "#0d2823", ink: "#ffd6a5" }, light: { bg: "#dff5ea", ink: "#0f5d40" }
+    },
+    {
+      name: "moon and star",
+      text: "A small light beside a bigger one. Company in the dark.",
+      mult: 1.0,
+      paths: crescent,
+      dark: { bg: "#15173d", ink: "#f5e6a8" }, light: { bg: "#e2e5ff", ink: "#262a85" }
+    },
+    {
+      name: "two hearts",
+      text: "One heart is a feeling. Two that overlap are a plan.",
+      mult: 1.08,
+      paths: function () { return [heart(0.72, -0.3, 0.02), heart(0.72, 0.3, -0.06)]; },
+      dark: { bg: "#2d1231", ink: "#f4a6ff" }, light: { bg: "#f6dcf9", ink: "#86228f" }
+    }
+  ];
+
+  /* ---------- sampling: even spacing along all lines, normalised to [-1, 1] ---------- */
+  function toPoints(paths, n, mult) {
+    var minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    paths.forEach(function (p) {
+      p.forEach(function (q) {
+        if (q[0] < minX) minX = q[0]; if (q[0] > maxX) maxX = q[0];
+        if (q[1] < minY) minY = q[1]; if (q[1] > maxY) maxY = q[1];
+      });
+    });
+    var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    var half = Math.max(maxX - minX, maxY - minY) / 2;
+    var segs = [], total = 0;
+    paths.forEach(function (p) {
+      for (var i = 0; i < p.length - 1; i++) {
+        var l = Math.hypot(p[i + 1][0] - p[i][0], p[i + 1][1] - p[i][1]);
+        if (l > 0) { segs.push([p[i][0], p[i][1], p[i + 1][0], p[i + 1][1], total, l]); total += l; }
+      }
+    });
+    var out = [], si = 0;
+    for (var i = 0; i < n; i++) {
+      var d = (i + 0.5) / n * total;
+      while (si < segs.length - 1 && segs[si + 1][4] <= d) si++;
+      var s = segs[si], u = (d - s[4]) / s[5];
+      var x = s[0] + (s[2] - s[0]) * u, y = s[1] + (s[3] - s[1]) * u;
+      out.push([(x - cx) / half * mult, (y - cy) / half * mult]);
+    }
+    return out;
+  }
+
+  /* ---------- setup ---------- */
+  var root = document.documentElement;
+  var canvas = document.getElementById("stage");
+  var ctx = canvas.getContext("2d");
+  var listEl = document.getElementById("list");
+  var copyEl = document.getElementById("copy");
+  var nameEl = document.getElementById("name");
+  var meaningEl = document.getElementById("meaning");
+  var barEl = document.getElementById("bar");
+  var pauseBtn = document.getElementById("pause");
+  var anotherBtn = document.getElementById("another");
+
+  var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var reduced = motionQuery.matches;
+  var playing = !reduced;
+  var W = 0, H = 0, S = 0, CX = 0, CY = 0;
+  var N = window.innerWidth < 640 ? 900 : 1500;
+  var current = -1, elapsed = 0, swapTimer = 0;
+  var pointer = { x: 0, y: 0, active: false };
+
+  SYMBOLS.forEach(function (s) { s.pts = toPoints(s.paths(), N, s.mult); });
+
+  function gauss() { return (Math.random() + Math.random() + Math.random() + Math.random() - 2) * 0.9; }
+
+  var particles = [];
+  for (var i = 0; i < N; i++) {
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: 0, vy: 0,
+      k: 0.018 + Math.random() * 0.03,
+      damp: 0.82 + Math.random() * 0.08,
+      s: 0.8 + Math.random() * 1.5,
+      a: 0.45 + Math.random() * 0.55,
+      ph: Math.random() * TAU,
+      nx: 0, ny: 0
+    });
+  }
+
+  var floaters = [];
+  for (var f = 0; f < 26; f++) {
+    floaters.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      s: 8 + Math.random() * 12,
+      sp: 12 + Math.random() * 20,
+      ph: Math.random() * TAU,
+      a: 0.12 + Math.random() * 0.18
+    });
+  }
+  function miniHeart(x, y, s) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + s * 0.35);
+    ctx.bezierCurveTo(x - s * 0.05, y + s * 0.25, x - s * 0.5, y + s * 0.05, x - s * 0.5, y - s * 0.2);
+    ctx.bezierCurveTo(x - s * 0.5, y - s * 0.5, x - s * 0.05, y - s * 0.5, x, y - s * 0.2);
+    ctx.bezierCurveTo(x + s * 0.05, y - s * 0.5, x + s * 0.5, y - s * 0.5, x + s * 0.5, y - s * 0.2);
+    ctx.bezierCurveTo(x + s * 0.5, y + s * 0.05, x + s * 0.05, y + s * 0.25, x, y + s * 0.35);
+    ctx.fill();
+  }
+
+  function assign(index) {
+    var pts = SYMBOLS[index].pts;
+    for (var i = 0; i < N; i++) {
+      var p = particles[i], halo = Math.random() < 0.18;
+      var sigma = halo ? 0.055 : 0.008;
+      p.jx = gauss() * sigma;
+      p.jy = gauss() * sigma;
+      p.flow = halo ? 0.6 : 1;
+    }
+  }
+
+  /* ---------- colour ---------- */
+  function isDark() {
+    var t = root.getAttribute("data-theme");
+    if (t) return t === "dark";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function hex(h) { return [1, 3, 5].map(function (i) { return parseInt(h.slice(i, i + 2), 16); }); }
+  function rgb(c) { return "rgb(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + ")"; }
+  var cur = { bg: [0, 0, 0], ink: [0, 0, 0] };
+  var tgt = { bg: [0, 0, 0], ink: [0, 0, 0] };
+  var inkCss = "#fff";
+
+  function setPalette(index, snap) {
+    var pal = SYMBOLS[index][isDark() ? "dark" : "light"];
+    tgt.bg = hex(pal.bg); tgt.ink = hex(pal.ink);
+    if (snap || reduced) { cur.bg = tgt.bg.slice(); cur.ink = tgt.ink.slice(); applyColors(); }
+  }
+  function applyColors() {
+    root.style.setProperty("--bg", rgb(cur.bg));
+    root.style.setProperty("--ink", rgb(cur.ink));
+    inkCss = rgb(cur.ink);
+  }
+  function stepColors() {
+    var changed = false;
+    ["bg", "ink"].forEach(function (k) {
+      for (var c = 0; c < 3; c++) {
+        var d = tgt[k][c] - cur[k][c];
+        if (Math.abs(d) > 0.4) { cur[k][c] += d * 0.07; changed = true; }
+        else if (d !== 0) { cur[k][c] = tgt[k][c]; changed = true; }
+      }
+    });
+    if (changed) applyColors();
+  }
+
+  /* ---------- list ---------- */
+  var buttons = SYMBOLS.map(function (s, i) {
+    var li = document.createElement("li");
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = s.name;
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", function () { show(i); });
+    li.appendChild(b);
+    listEl.appendChild(li);
+    return b;
+  });
+
+  /* ---------- switching symbols ---------- */
+  function show(index, instant) {
+    if (index === current && !instant) return;
+    current = index;
+    assign(index);
+    setPalette(index, instant);
+    buttons.forEach(function (b, i) { b.setAttribute("aria-pressed", i === index ? "true" : "false"); });
+    if (!instant) {
+      buttons[index].scrollIntoView({ inline: "center", block: "nearest", behavior: reduced ? "auto" : "smooth" });
+    }
+    var s = SYMBOLS[index];
+    clearTimeout(swapTimer);
+    if (reduced || instant) {
+      nameEl.textContent = s.name; meaningEl.textContent = s.text;
+    } else {
+      copyEl.classList.add("out");
+      swapTimer = setTimeout(function () {
+        nameEl.textContent = s.name; meaningEl.textContent = s.text;
+        copyEl.classList.remove("out");
+      }, 220);
+    }
+    elapsed = 0;
+    barEl.style.transform = "scaleX(0)";
+  }
+  function randomOther() {
+    var i;
+    do { i = Math.floor(Math.random() * SYMBOLS.length); } while (i === current);
+    return i;
+  }
+
+  anotherBtn.addEventListener("click", function () { show(randomOther()); });
+  pauseBtn.addEventListener("click", function () {
+    playing = !playing;
+    pauseBtn.textContent = playing ? "Pause" : "Play";
+  });
+  window.addEventListener("keydown", function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") { show((current + 1) % SYMBOLS.length); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { show((current - 1 + SYMBOLS.length) % SYMBOLS.length); }
+    else return;
+    e.preventDefault();
+  });
+
+  /* ---------- pointer: push particles away, click to scatter ---------- */
+  window.addEventListener("pointermove", function (e) { pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; });
+  window.addEventListener("pointerup", function (e) { if (e.pointerType !== "mouse") pointer.active = false; });
+  window.addEventListener("pointercancel", function () { pointer.active = false; });
+  document.addEventListener("pointerleave", function () { pointer.active = false; });
+  canvas.addEventListener("pointerdown", function (e) {
+    if (reduced) return;
+    var reach = Math.max(W, H) * 0.6;
+    for (var i = 0; i < N; i++) {
+      var p = particles[i], dx = p.x - e.clientX, dy = p.y - e.clientY;
+      var d = Math.hypot(dx, dy) || 1;
+      var f = (8 + Math.random() * 10) * Math.max(0.25, 1 - d / reach);
+      p.vx += dx / d * f; p.vy += dy / d * f;
+    }
+  });
+
+  /* ---------- layout ---------- */
+  function resize() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var wide = W >= 900;
+    S = Math.min(W * (wide ? 0.34 : 0.36), H * 0.34);
+    CX = wide ? W * 0.56 : W / 2;
+    CY = H * (wide ? 0.46 : 0.45);
+  }
+  window.addEventListener("resize", resize);
+
+  /* ---------- theme + motion changes ---------- */
+  function refreshPalette() { setPalette(current, false); }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshPalette);
+  new MutationObserver(refreshPalette).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+  motionQuery.addEventListener("change", function () {
+    reduced = motionQuery.matches;
+    playing = !reduced;
+    pauseBtn.hidden = reduced;
+    pauseBtn.textContent = "Pause";
+  });
+  pauseBtn.hidden = reduced;
+
+  /* ---------- frame loop ---------- */
+  var last = null, t = 0;
+  function frame(now) {
+    if (last === null) last = now;
+    var dt = Math.max(0, Math.min((now - last) / 1000, 0.05));
+    last = now; t += dt;
+    var ds = Math.min(dt * 60, 2.5);
+
+    stepColors();
+
+    if (playing && !reduced) {
+      elapsed += dt;
+      if (elapsed >= DUR) show(randomOther());
+      else barEl.style.transform = "scaleX(" + (elapsed / DUR).toFixed(4) + ")";
+    }
+
+    if (reduced) {
+      ctx.clearRect(0, 0, W, H);
+    } else {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.globalAlpha = 1 - Math.pow(0.8, ds);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = "source-over";
+    }
+    ctx.fillStyle = inkCss;
+
+    if (!reduced) {
+      for (var q = 0; q < floaters.length; q++) {
+        var fl = floaters[q];
+        fl.y -= fl.sp * dt;
+        if (fl.y < -20) { fl.y = H + 20; fl.x = Math.random() * W; }
+        ctx.globalAlpha = fl.a;
+        miniHeart(fl.x + Math.sin(t * 0.5 + fl.ph) * 16, fl.y, fl.s);
+      }
+    }
+
+    var breath = reduced ? 1 : 1 + 0.018 * Math.sin(t * 1.3);
+    var ang = reduced ? 0 : 0.07 * Math.sin(t * 0.45);
+    var cosR = Math.cos(ang), sinR = Math.sin(ang);
+    var off = reduced ? 0 : t * 55;
+    var pts = SYMBOLS[current].pts;
+    var R = 90, R2 = R * R;
+
+    for (var i = 0; i < N; i++) {
+      var p = particles[i];
+      var fi = (i + off * p.flow) % N, j = fi | 0, u = fi - j;
+      var pa = pts[j], pb = pts[(j + 1) % N];
+      if (Math.abs(pb[0] - pa[0]) + Math.abs(pb[1] - pa[1]) > 0.15) u = 0;
+      var nx = pa[0] + (pb[0] - pa[0]) * u + p.jx;
+      var ny = pa[1] + (pb[1] - pa[1]) * u + p.jy;
+      var rx = nx * cosR - ny * sinR;
+      ny = nx * sinR + ny * cosR;
+      nx = rx;
+      var tx = CX + nx * S * breath;
+      var ty = CY + ny * S * breath;
+      if (reduced) {
+        p.x = tx; p.y = ty;
+      } else {
+        tx += Math.sin(t * 0.7 + p.ph) * 2.2;
+        ty += Math.cos(t * 0.6 + p.ph) * 2.2;
+        p.vx += (tx - p.x) * p.k * ds;
+        p.vy += (ty - p.y) * p.k * ds;
+        if (pointer.active) {
+          var dx = p.x - pointer.x, dy = p.y - pointer.y, d2 = dx * dx + dy * dy;
+          if (d2 < R2) {
+            var d = Math.sqrt(d2) || 1, f = Math.pow(1 - d / R, 2) * 3.2 * ds;
+            p.vx += dx / d * f; p.vy += dy / d * f;
+          }
+        }
+        var dm = Math.pow(p.damp, ds);
+        p.vx *= dm; p.vy *= dm;
+        p.x += p.vx * ds; p.y += p.vy * ds;
+        if (!isFinite(p.x) || !isFinite(p.y)) { p.x = tx; p.y = ty; p.vx = 0; p.vy = 0; }
+      }
+      ctx.globalAlpha = p.a * (reduced ? 1 : 0.85 + 0.15 * Math.sin(t * 2 + p.ph));
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.s, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  show(Math.floor(Math.random() * SYMBOLS.length), true);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
